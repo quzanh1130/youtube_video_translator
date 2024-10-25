@@ -1,0 +1,22 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    networks:
+      - real_time_transcribe-network
+  redis:
+    image: "redis:alpine"
+    networks:
+      - real_time_transcribe-network
+    
+networks:
+  real_time_transcribe-network:
+      name: real_time_transcribe-network

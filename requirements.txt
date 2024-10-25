@@ -1,0 +1,7 @@
+openai-whisper
+transformers
+torch
+torchaudio
+accelerate
+Flask
+flask_socketio

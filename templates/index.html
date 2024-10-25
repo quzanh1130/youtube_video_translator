@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Speech to Text</title>
+</head>
+<body>
+    <h1>Real-Time Speech to Text</h1>
+    <button onclick="startRecording()">Start Recording</button>
+    <button onclick="stopRecording()">Stop Recording</button>
+    <p id="transcript"></p>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+
+                    mediaRecorder.addEventListener("dataavailable", event => {
+                        audioChunks.push(event.data);
+                    });
+
+                    mediaRecorder.addEventListener("stop", () => {
+                        const audioBlob = new Blob(audioChunks);
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            const base64data = reader.result.split(',')[1];
+                            socket.emit('audio_data', base64data);
+                        };
+                        audioChunks = [];
+                    });
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+        }
+
+        socket.on('transcript', data => {
+            document.getElementById('transcript').innerText = data.text;
+        });
+    </script>
+</body>
+</html>
