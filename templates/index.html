@@ -1,53 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Speech to Text</title>
+    <title>YouTube Video Translator with Subtitles</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.7);
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        #videoContainer {
+            display: none;
+            text-align: center;
+        }
+    
+        #translatedVideo {
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <h1>Real-Time Speech to Text</h1>
-    <button onclick="startRecording()">Start Recording</button>
-    <button onclick="stopRecording()">Stop Recording</button>
-    <p id="transcript"></p>
+    <div class="container">
+        <h1>YouTube Video Translator with Subtitles</h1>
+        <form id="videoForm" method="post" onsubmit="processVideo(event)">
+            <label for="youtube_link">Enter YouTube Link:</label><br>
+            <input type="text" id="youtube_link" name="youtube_link" required><br><br>
 
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+            <label for="direction">Translation Direction:</label><br>
+            <select id="direction" name="direction">
+                <option value="vn_to_en">Vietnamese to English</option>
+                <option value="en_to_vn">English to Vietnamese</option>
+            </select><br><br>
+
+            <input type="submit" value="Start">
+            <p id="errorMessage" class="error-message" style="display: none;"></p>
+        </form>
+    </div>
+
+    <div id="videoContainer" style="display: none;">
+        <h2>Translated Video</h2>
+        <video id="translatedVideo" controls autoplay>
+            <source id="videoSource" type="video/mp4">
+            <track id="subtitleTrack" kind="subtitles" srclang="en" label="English" default>
+            Your browser does not support the video tag.
+        </video>        
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
     <script>
-        const socket = io();
-
-        let mediaRecorder;
-        let audioChunks = [];
-
-        function startRecording() {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.start();
-
-                    mediaRecorder.addEventListener("dataavailable", event => {
-                        audioChunks.push(event.data);
-                    });
-
-                    mediaRecorder.addEventListener("stop", () => {
-                        const audioBlob = new Blob(audioChunks);
-                        const reader = new FileReader();
-                        reader.readAsDataURL(audioBlob);
-                        reader.onloadend = () => {
-                            const base64data = reader.result.split(',')[1];
-                            socket.emit('audio_data', base64data);
-                        };
-                        audioChunks = [];
-                    });
-                });
+        function processVideo(event) {
+            event.preventDefault();
+            var form = event.target;
+            var formData = new FormData(form);
+            var xhr = new XMLHttpRequest();
+        
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            document.getElementById("errorMessage").innerText = response.error;
+                            document.getElementById("errorMessage").style.display = "block";
+                            document.getElementById("loadingOverlay").style.display = "none"; // Hide loading overlay
+                        } else {
+                            var videoUrl = response.video_url;
+                            var subtitleUrl = response.subtitle_url;
+                            document.getElementById("videoSource").src = videoUrl;
+                            document.getElementById("subtitleTrack").src = subtitleUrl;
+                            document.getElementById("translatedVideo").load();
+                            document.getElementById("loadingOverlay").style.display = "none";
+                            document.getElementById("videoContainer").style.display = "block";
+                        }
+                    } else {
+                        alert("Error processing video. Please try again.");
+                        document.getElementById("loadingOverlay").style.display = "none"; // Hide loading overlay in case of error
+                    }
+                }
+            };
+        
+            xhr.open(form.method, form.action, true);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send(formData);
+        
+            document.getElementById("loadingOverlay").style.display = "block";
         }
-
-        function stopRecording() {
-            mediaRecorder.stop();
-        }
-
-        socket.on('transcript', data => {
-            document.getElementById('transcript').innerText = data.text;
-        });
     </script>
 </body>
 </html>

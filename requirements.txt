@@ -1,7 +1,9 @@
 openai-whisper
+moviepy
 transformers
+sentencepiece
 torch
 torchaudio
 accelerate
+yt-dlp
 Flask
-flask_socketio

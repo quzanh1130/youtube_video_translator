@@ -11,12 +11,12 @@ services:
     depends_on:
       - redis
     networks:
-      - real_time_transcribe-network
+      - translator-network
   redis:
     image: "redis:alpine"
     networks:
-      - real_time_transcribe-network
+      - translator-network
     
 networks:
-  real_time_transcribe-network:
-      name: real_time_transcribe-network
+  translator-network:
+      name: translator-network
